@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectSourceType {
+  UPLOAD
+  YOUTUBE
+}
+
+enum ProjectStatus {
+  NEW
+  PROCESSING
+  READY
+  FAILED
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  name      String?
+  createdAt DateTime    @default(now())
+  workspaces Workspace[] @relation("WorkspaceOwner")
+  projects  Project[]
+  affiliate Affiliate?
+  referrals Referral[]  @relation("ReferredUser")
+}
+
+model Workspace {
+  id        String    @id @default(cuid())
+  ownerId   String
+  name      String
+  createdAt DateTime  @default(now())
+  owner     User      @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  projects  Project[]
+}
+
+model Project {
+  id                String            @id @default(cuid())
+  workspaceId       String
+  userId            String
+  title             String
+  sourceType        ProjectSourceType
+  sourceUrl         String?
+  originalObjectKey String?
+  durationSec       Int?
+  status            ProjectStatus     @default(NEW)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id])
+  user              User              @relation(fields: [userId], references: [id])
+}
+
+model Affiliate {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  code           String   @unique
+  commissionRate Float    @default(0.25)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  referrals      Referral[]
+  clicks         AffiliateClick[]
+}
+
+model Referral {
+  id             String   @id @default(cuid())
+  affiliateId    String
+  referredUserId String   @unique
+  createdAt      DateTime @default(now())
+  affiliate      Affiliate @relation(fields: [affiliateId], references: [id])
+  referredUser   User      @relation("ReferredUser", fields: [referredUserId], references: [id])
+}
+
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  affiliateId String
+  anonId      String
+  userAgent   String?
+  ipHash      String?
+  createdAt   DateTime @default(now())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+}
